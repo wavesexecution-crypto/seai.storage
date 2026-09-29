@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "db:migrate": "tsx scripts/migrate.ts",
+    "verify:production": "node scripts/verify-production.mjs",
     "lint": "eslint src tests --ext .ts",
     "typecheck": "tsc --noEmit"
   },

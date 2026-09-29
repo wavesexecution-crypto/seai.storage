@@ -3,7 +3,10 @@
  * NEVER use user-provided filenames as keys.
  */
 
-const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+// Colon is allowed for namespaced provisional scopes (e.g. `intake:<uuid>`
+// per docs/INTEGRATION_CONTRACT_FINAL.md §3). Path separators and traversal
+// remain rejected below; `:` cannot escape the key structure.
+const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 
 export function assertSafeScopeId(value: string, label: string): void {
   if (!SAFE_ID.test(value)) {
