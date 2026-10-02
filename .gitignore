@@ -6,3 +6,4 @@ coverage/
 data/
 *.log
 .DS_Store
+.playwright-mcp/

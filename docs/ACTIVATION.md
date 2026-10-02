@@ -9,11 +9,15 @@ variables and hosting dashboards only.
 
 ## 0. Prerequisites (external — the only manual boundary)
 
-1. **R2 bucket** `seai-storage-prod` (Cloudflare dashboard → R2 → Create bucket;
-   location: nearest to users). Block public access (R2 buckets are private by
-   default — do not attach a public domain). Create a scoped API token:
-   R2 → Manage API tokens → Object Read & Write scoped to
-   `seai-storage-prod` only.
+1. **Backblaze B2 bucket** `seai-storage-prod` (Backblaze console → Buckets;
+   private, no public access — B2 buckets are private by default, do not
+   enable public access or attach a public domain). Use the existing
+   `seai-storage-prod` bucket — do not create another bucket, do not migrate
+   to R2. Create a scoped application key: App Keys → Add a New Application
+   Key scoped to `seai-storage-prod` only (Object Read & Write). Note the
+   bucket's S3 endpoint `https://s3.<region>.backblazeb2.com` and region (2nd
+   part of the endpoint, e.g. `us-west-004`). If the key is bucket-restricted,
+   include the `listAllBucketNames` capability for AWS SDK compatibility.
 2. **Persistent Node host** (VPS / Render / Railway / Fly — NOT Vercel
    serverless: function payload caps conflict with the raw-upload route).
    Node 20+, HTTPS terminated at the host/LB, tides to
@@ -21,8 +25,9 @@ variables and hosting dashboards only.
 
 ## 1. Bucket CORS (exact artifact)
 
-R2 dashboard → bucket → Settings → CORS policy → paste (or via S3 API
-`PutBucketCors` against the R2 endpoint):
+Backblaze console → bucket → CORS settings → paste (or via S3 API
+`PutBucketCors` against the B2 S3 endpoint with
+`--endpoint-url https://s3.<region>.backblazeb2.com`):
 
 ```json
 [
@@ -36,10 +41,14 @@ R2 dashboard → bucket → Settings → CORS policy → paste (or via S3 API
 ]
 ```
 
-AWS S3 equivalent via CLI (no wildcard origin):
+AWS S3 equivalent via CLI against B2 (no wildcard origin; B2 has no
+`put-public-access-block` — privacy comes from the bucket staying private in
+the Backblaze console):
 
 ```bash
-aws s3api put-bucket-cors --bucket seai-storage-prod --cors-configuration '{
+aws s3api put-bucket-cors --bucket seai-storage-prod \
+  --endpoint-url https://s3.<region>.backblazeb2.com --region <region> \
+  --cors-configuration '{
   "CORSRules": [{
     "AllowedOrigins": ["https://seai.store", "https://dash.seai.store"],
     "AllowedMethods": ["PUT", "GET", "HEAD"],
@@ -48,9 +57,8 @@ aws s3api put-bucket-cors --bucket seai-storage-prod --cors-configuration '{
     "MaxAgeSeconds": 3600
   }]
 }'
-aws s3api put-public-access-block --bucket seai-storage-prod \
-  --public-access-block-configuration \
-  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+# Keep the bucket private in the Backblaze console (private ACL only).
+# Do not attach a public domain. Do not use canned ACL `public-read`.
 ```
 
 ## 2. Host environment (exact names — values from the secret handoff)
@@ -58,8 +66,8 @@ aws s3api put-public-access-block --bucket seai-storage-prod \
 ```bash
 DATABASE_URL=<production Neon seai_storage URL>
 STORAGE_PROVIDER=s3
-S3_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
-S3_REGION=auto
+S3_ENDPOINT=https://s3.<region>.backblazeb2.com
+S3_REGION=<region, e.g. us-west-004 — must match the endpoint, never `auto`>
 S3_BUCKET=seai-storage-prod
 S3_ACCESS_KEY_ID=<scoped key>
 S3_SECRET_ACCESS_KEY=<scoped secret>
@@ -137,7 +145,7 @@ Browsers must only ever receive signed URLs + file IDs (audited clean).
 STORAGE_API_URL=https://<storage-host> \
 STORAGE_JWT_SECRET=<secret> \
 SERVICE_API_KEYS='cdf:<key>,seai-public:<key>' \
-S3_ENDPOINT=... S3_REGION=auto S3_BUCKET=seai-storage-prod \
+S3_ENDPOINT=... S3_REGION=<region> S3_BUCKET=seai-storage-prod \
 S3_ACCESS_KEY_ID=<key> S3_SECRET_ACCESS_KEY=<secret> \
 PUBLIC_BASE_URL=https://<storage-host-or-cdn> \
   npm run verify:production

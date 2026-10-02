@@ -12,7 +12,8 @@ export interface S3ProviderOptions {
 }
 
 /**
- * S3-compatible provider (AWS S3, MinIO, R2-style endpoints).
+ * S3-compatible provider (AWS S3, MinIO, Backblaze B2, and other S3-compatible endpoints).
+ * Production target is the private Backblaze B2 bucket `seai-storage-prod`.
  * All provider-specific SDK usage stays in this file.
  */
 export class S3CompatibleProvider implements StorageProvider {

@@ -12,7 +12,7 @@ async function start(): Promise<void> {
   const provider = createProviderFromConfig(cfg);
   const app = createApp({ cfg, db, provider });
 
-  const server = app.listen(cfg.PORT, () => {
+  const server = app.listen(cfg.PORT, '0.0.0.0', () => {
     logger.info(
       { port: cfg.PORT, provider: provider.name, scannerEnabled: cfg.SCANNER_ENABLED },
       `seai.storage listening on ${cfg.PORT} (provider=${provider.name})`,
